@@ -1,13 +1,12 @@
 [toolchain]
 package_manager = "yarn"
-anchor_version = "0.30.1"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.localnet]
-anchor = "5hLo9VzZ4uwDLm4ydjBdbFiMAuPE6hdPu6MjMbRGb1NA"
+crudapp = "JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H"
 
 [registry]
 url = "https://api.apr.dev"
@@ -17,4 +16,4 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "vitest"
