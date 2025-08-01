@@ -11,17 +11,13 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { toast } from 'sonner'
-import { generateKeyPairSigner } from 'gill'
+import { generateKeyPairSigner, signature } from 'gill'
 import { useWalletUi } from '@wallet-ui/react'
 import { useWalletTransactionSignAndSend } from '../solana/use-wallet-transaction-sign-and-send'
 import { useClusterVersion } from '@/components/cluster/use-cluster-version'
 import { toastTx } from '@/components/toast-tx'
 import { useWalletUiSigner } from '@/components/solana/use-wallet-ui-signer'
 import { install as installEd25519 } from '@solana/webcrypto-ed25519-polyfill'
-import cluster from 'cluster'
-import { error } from 'console'
-import { AccountState } from 'gill/programs'
-import { get } from 'http'
 
 // polyfill ed25519 for browsers (to allow `generateKeyPairSigner` to work)
 installEd25519()
@@ -140,6 +136,45 @@ const createEntry = useMutation<string, Error, CreateEntryArgs> ({
     createEntry,
   }
 
+})
+
+const accountQuery = useQuery({
+  queryKey: ['crudapp', 'fetch', { cluster, account }],
+  queryFn: () => program.account.journalEntryState.fetch(account),
+});
+
+const updateentry = useMutation<string, Error, CreateEntryArgs>({
+  mutationKey: ['journalEntry', 'update', { cluster }],
+
+  mutationFn: (signature) => {
+    return program.methods.updateJournalEntry(signature).rpc();
+  },
+
+  onSuccess: (signature) => {
+    toast.success('Entry updated successfully', {
+      description: `Signature: ${signature}`,
+    });
+    accounts.refetch();
+  },
+  onError: (error) => {
+    toast.error(`Failed to update entry: ${error.message}`);
+  }
+}) 
+
+const deleteEntry = useMutation ({
+  mutationKey: ['journalEntry', 'delete', { cluster }],
+  mutationFn: ({ title }) => {
+    return program.methods.journalEntryDelete(title).rpc();
+  },
+  onSuccess: async (signature) => {
+    toast.success('Entry deleted successfully', {
+      description: `Signature: ${signature}`,
+    });
+    accounts.refetch();
+  },
+  onError: (error) => {
+    toast.error(`Failed to delete entry: ${error.message}`);
+  }
 })
 
 function useCrudappAccountsQueryKey() {

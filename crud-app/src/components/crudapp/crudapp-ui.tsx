@@ -13,7 +13,46 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ExplorerLink } from '../cluster/cluster-ui'
 import { CrudappAccount } from '@project/anchor'
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
+import { initialize } from 'next/dist/server/lib/render-server'
+import { isKeyPairSigner } from 'gill'
+
+export function CrudappCreate() {
+
+  const [title, setTitle] = useState("");
+  const [message , setMessage] = useState("");
+  const {createEntry} = useCrudappProgram();
+
+  const {publicKey}  = useWallet();
+
+  const isFormInvalid = title.trim() === "" || message.trim() === "";
+
+  const handleSubmit = () => {
+    if(publicKey && isFormInvalid) {
+      createEntry.mutateAsync({ publicKey, title, message });
+    }
+
+    if(!publicKey)  {
+      return <p>
+        Connect your wallet to create a new entry.
+      </p>
+    }
+  }
+  return (
+    <div>
+      <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} 
+      className='input input-bordered w-full mb-2 max-w-xs'
+      />
+      <textarea name="message" id="" className='input input-bordered w-full mb-2 max-w-xs' value={message} onChange={(e) => setMessage(e.target.value)} />
+      <button onClick={handleSubmit} disabled={isFormInvalid || createEntry.isPending}
+      className='btn btn-primary w-full max-w-xs'
+      >
+        Create
+      </button>
+    </div>
+  )
+   
+}
 
 export function CrudappProgramExplorerLink() {
   const programId = useCrudappProgramId()
@@ -65,24 +104,11 @@ export function CrudappProgramGuard({ children }: { children: ReactNode }) {
 }
 
 function CrudappCard({ crudapp }: { crudapp: CrudappAccount }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Crudapp: {crudapp.data.count}</CardTitle>
-        <CardDescription>
-          Account: <ExplorerLink address={crudapp.address} label={ellipsify(crudapp.address)} />
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4 justify-evenly">
-          <CrudappButtonIncrement crudapp={crudapp} />
-          <CrudappButtonSet crudapp={crudapp} />
-          <CrudappButtonDecrement crudapp={crudapp} />
-          <CrudappButtonClose crudapp={crudapp} />
-        </div>
-      </CardContent>
-    </Card>
-  )
+
+  const {
+    accountQuery , updateEntry, deleteEntry
+  } = useCrudappProgram
+  
 }
 
 export function CrudappButtonInitialize() {
