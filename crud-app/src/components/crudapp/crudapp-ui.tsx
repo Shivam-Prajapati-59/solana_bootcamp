@@ -107,8 +107,22 @@ function CrudappCard({ crudapp }: { crudapp: CrudappAccount }) {
 
   const {
     accountQuery , updateEntry, deleteEntry
-  } = useCrudappProgram
-  
+  } = useCrudappProgram({account: crudapp})
+
+  const {publicKey} = useWallet();
+  const [message , setMessage] = useState("");
+  const isFormInvalid = message.trim() === "";
+  const title = accountQuery.data?.title;
+  const handleSubmit = () => {
+    if (publicKey && !isFormInvalid) {
+      updateEntry.mutateAsync({ publicKey, title, message });
+    }
+
+    if (!publicKey) {
+      return <p>Connect your wallet to create a new entry.</p>;
+    }
+  };
+
 }
 
 export function CrudappButtonInitialize() {
