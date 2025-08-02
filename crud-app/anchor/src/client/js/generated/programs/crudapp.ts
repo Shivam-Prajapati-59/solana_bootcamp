@@ -14,18 +14,16 @@ import {
   type ReadonlyUint8Array,
 } from 'gill';
 import {
-  type ParsedCloseInstruction,
-  type ParsedDecrementInstruction,
-  type ParsedIncrementInstruction,
-  type ParsedInitializeInstruction,
-  type ParsedSetInstruction,
+  type ParsedCreateJournalEntryInstruction,
+  type ParsedDeleteJournalEntryInstruction,
+  type ParsedUpdateJournalEntryInstruction,
 } from '../instructions';
 
 export const CRUDAPP_PROGRAM_ADDRESS =
   'JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H' as Address<'JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H'>;
 
 export enum CrudappAccount {
-  Crudapp,
+  JournalEntryState,
 }
 
 export function identifyCrudappAccount(
@@ -36,12 +34,12 @@ export function identifyCrudappAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([255, 176, 4, 245, 188, 253, 124, 25])
+        new Uint8Array([113, 86, 110, 124, 140, 14, 58, 66])
       ),
       0
     )
   ) {
-    return CrudappAccount.Crudapp;
+    return CrudappAccount.JournalEntryState;
   }
   throw new Error(
     'The provided account could not be identified as a crudapp account.'
@@ -49,11 +47,9 @@ export function identifyCrudappAccount(
 }
 
 export enum CrudappInstruction {
-  Close,
-  Decrement,
-  Increment,
-  Initialize,
-  Set,
+  CreateJournalEntry,
+  DeleteJournalEntry,
+  UpdateJournalEntry,
 }
 
 export function identifyCrudappInstruction(
@@ -64,56 +60,34 @@ export function identifyCrudappInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([98, 165, 201, 177, 108, 65, 206, 96])
+        new Uint8Array([48, 65, 201, 186, 25, 41, 127, 0])
       ),
       0
     )
   ) {
-    return CrudappInstruction.Close;
+    return CrudappInstruction.CreateJournalEntry;
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([106, 227, 168, 59, 248, 27, 150, 101])
+        new Uint8Array([156, 50, 93, 5, 157, 97, 188, 114])
       ),
       0
     )
   ) {
-    return CrudappInstruction.Decrement;
+    return CrudappInstruction.DeleteJournalEntry;
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([11, 18, 104, 9, 104, 174, 59, 33])
+        new Uint8Array([113, 164, 49, 62, 43, 83, 194, 172])
       ),
       0
     )
   ) {
-    return CrudappInstruction.Increment;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237])
-      ),
-      0
-    )
-  ) {
-    return CrudappInstruction.Initialize;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([198, 51, 53, 241, 116, 29, 126, 194])
-      ),
-      0
-    )
-  ) {
-    return CrudappInstruction.Set;
+    return CrudappInstruction.UpdateJournalEntry;
   }
   throw new Error(
     'The provided instruction could not be identified as a crudapp instruction.'
@@ -124,17 +98,11 @@ export type ParsedCrudappInstruction<
   TProgram extends string = 'JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H',
 > =
   | ({
-      instructionType: CrudappInstruction.Close;
-    } & ParsedCloseInstruction<TProgram>)
+      instructionType: CrudappInstruction.CreateJournalEntry;
+    } & ParsedCreateJournalEntryInstruction<TProgram>)
   | ({
-      instructionType: CrudappInstruction.Decrement;
-    } & ParsedDecrementInstruction<TProgram>)
+      instructionType: CrudappInstruction.DeleteJournalEntry;
+    } & ParsedDeleteJournalEntryInstruction<TProgram>)
   | ({
-      instructionType: CrudappInstruction.Increment;
-    } & ParsedIncrementInstruction<TProgram>)
-  | ({
-      instructionType: CrudappInstruction.Initialize;
-    } & ParsedInitializeInstruction<TProgram>)
-  | ({
-      instructionType: CrudappInstruction.Set;
-    } & ParsedSetInstruction<TProgram>);
+      instructionType: CrudappInstruction.UpdateJournalEntry;
+    } & ParsedUpdateJournalEntryInstruction<TProgram>);

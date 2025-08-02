@@ -1,53 +1,62 @@
-import { ellipsify } from '@wallet-ui/react'
+import { ellipsify, useWalletUi } from '@wallet-ui/react'
 import {
   useCrudappAccountsQuery,
-  useCrudappCloseMutation,
-  useCrudappDecrementMutation,
-  useCrudappIncrementMutation,
-  useCrudappInitializeMutation,
   useCrudappProgram,
   useCrudappProgramId,
-  useCrudappSetMutation,
+  useCrudappCreateMutation,
+  useCrudappUpdateMutation,
+  useCrudappDeleteMutation,
+  useCrudappAccountQuery,
 } from './crudapp-data-access'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ExplorerLink } from '../cluster/cluster-ui'
 import { CrudappAccount } from '@project/anchor'
 import { ReactNode, useState } from 'react'
-import { initialize } from 'next/dist/server/lib/render-server'
-import { isKeyPairSigner } from 'gill'
 
 export function CrudappCreate() {
 
   const [title, setTitle] = useState("");
   const [message , setMessage] = useState("");
-  const {createEntry} = useCrudappProgram();
+  const createEntry = useCrudappCreateMutation();
 
-  const {publicKey}  = useWallet();
+  const { account } = useWalletUi();
 
   const isFormInvalid = title.trim() === "" || message.trim() === "";
 
   const handleSubmit = () => {
-    if(publicKey && isFormInvalid) {
-      createEntry.mutateAsync({ publicKey, title, message });
-    }
-
-    if(!publicKey)  {
-      return <p>
-        Connect your wallet to create a new entry.
-      </p>
+    if(account && !isFormInvalid) {
+      createEntry.mutateAsync({ title, message });
     }
   }
+
+  if(!account)  {
+    return <p>
+      Connect your wallet to create a new entry.
+    </p>
+  }
+
   return (
     <div>
-      <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} 
-      className='input input-bordered w-full mb-2 max-w-xs'
+      <input 
+        type="text" 
+        placeholder="Title"
+        value={title} 
+        onChange={(e) => setTitle(e.target.value)} 
+        className='input input-bordered w-full mb-2 max-w-xs'
       />
-      <textarea name="message" id="" className='input input-bordered w-full mb-2 max-w-xs' value={message} onChange={(e) => setMessage(e.target.value)} />
-      <button onClick={handleSubmit} disabled={isFormInvalid || createEntry.isPending}
-      className='btn btn-primary w-full max-w-xs'
+      <textarea 
+        name="message" 
+        id="" 
+        placeholder="Message"
+        className='input input-bordered w-full mb-2 max-w-xs' 
+        value={message} 
+        onChange={(e) => setMessage(e.target.value)} 
+      />
+      <button 
+        onClick={handleSubmit} 
+        disabled={isFormInvalid || createEntry.isPending}
+        className='btn btn-primary w-full max-w-xs'
       >
-        Create
+        {createEntry.isPending ? 'Creating...' : 'Create'}
       </button>
     </div>
   )
@@ -104,92 +113,74 @@ export function CrudappProgramGuard({ children }: { children: ReactNode }) {
 }
 
 function CrudappCard({ crudapp }: { crudapp: CrudappAccount }) {
+  const accountQuery = useCrudappAccountQuery({ account: crudapp })
+  const updateEntry = useCrudappUpdateMutation()
+  const deleteEntry = useCrudappDeleteMutation()
 
-  const {
-    accountQuery , updateEntry, deleteEntry
-  } = useCrudappProgram({account: crudapp})
+  const { account } = useWalletUi()
+  const [message, setMessage] = useState("")
+  const isFormInvalid = message.trim() === ""
+  const title = accountQuery.data?.title
 
-  const {publicKey} = useWallet();
-  const [message , setMessage] = useState("");
-  const isFormInvalid = message.trim() === "";
-  const title = accountQuery.data?.title;
   const handleSubmit = () => {
-    if (publicKey && !isFormInvalid) {
-      updateEntry.mutateAsync({ publicKey, title, message });
+    if (account && !isFormInvalid && title) {
+      updateEntry.mutateAsync({ title, message })
     }
+  }
 
-    if (!publicKey) {
-      return <p>Connect your wallet to create a new entry.</p>;
+  const handleDelete = () => {
+    if (title) {
+      deleteEntry.mutateAsync({ title })
     }
-  };
+  }
 
-}
+  if (!account) {
+    return <p>Connect your wallet to view entries.</p>
+  }
 
-export function CrudappButtonInitialize() {
-  const mutationInitialize = useCrudappInitializeMutation()
+  return accountQuery.isLoading ? (
+    <span className="loading loading-spinner loading-lg"></span>
+  ) : (
+    <div className='card card-bordered border-base-300 bg-base-100 text-neutral-content shadow-xl'>
+      <div className='card-body items-center text-center'>
+        <div className='space-y-6'>
+          <h2 
+            className='card-title text-2xl font-bold cursor-pointer'
+            onClick={() => accountQuery.refetch()}
+          >
+            {accountQuery.data?.title || 'Untitled Entry'}
+          </h2>
+          <p>
+            {accountQuery.data?.message || 'No message provided.'}
+          </p>
 
-  return (
-    <Button onClick={() => mutationInitialize.mutateAsync()} disabled={mutationInitialize.isPending}>
-      Initialize Crudapp {mutationInitialize.isPending && '...'}
-    </Button>
-  )
-}
+          <div className='card-actions justify-center space-x-2'>
+            <textarea 
+              name="message" 
+              placeholder="Update message"
+              className='input input-bordered w-full mb-2 max-w-xs' 
+              value={message} 
+              onChange={(e) => setMessage(e.target.value)} 
+            />
 
-export function CrudappButtonIncrement({ crudapp }: { crudapp: CrudappAccount }) {
-  const incrementMutation = useCrudappIncrementMutation({ crudapp })
-
-  return (
-    <Button variant="outline" onClick={() => incrementMutation.mutateAsync()} disabled={incrementMutation.isPending}>
-      Increment
-    </Button>
-  )
-}
-
-export function CrudappButtonSet({ crudapp }: { crudapp: CrudappAccount }) {
-  const setMutation = useCrudappSetMutation({ crudapp })
-
-  return (
-    <Button
-      variant="outline"
-      onClick={() => {
-        const value = window.prompt('Set value to:', crudapp.data.count.toString() ?? '0')
-        if (!value || parseInt(value) === crudapp.data.count || isNaN(parseInt(value))) {
-          return
-        }
-        return setMutation.mutateAsync(parseInt(value))
-      }}
-      disabled={setMutation.isPending}
-    >
-      Set
-    </Button>
-  )
-}
-
-export function CrudappButtonDecrement({ crudapp }: { crudapp: CrudappAccount }) {
-  const decrementMutation = useCrudappDecrementMutation({ crudapp })
-
-  return (
-    <Button variant="outline" onClick={() => decrementMutation.mutateAsync()} disabled={decrementMutation.isPending}>
-      Decrement
-    </Button>
-  )
-}
-
-export function CrudappButtonClose({ crudapp }: { crudapp: CrudappAccount }) {
-  const closeMutation = useCrudappCloseMutation({ crudapp })
-
-  return (
-    <Button
-      variant="destructive"
-      onClick={() => {
-        if (!window.confirm('Are you sure you want to close this account?')) {
-          return
-        }
-        return closeMutation.mutateAsync()
-      }}
-      disabled={closeMutation.isPending}
-    >
-      Close
-    </Button>
+            <button 
+              className='btn btn-xs lg:btn-md btn-primary' 
+              disabled={updateEntry.isPending || isFormInvalid}
+              onClick={handleSubmit}
+            > 
+              {updateEntry.isPending ? 'Updating...' : 'Update'}
+            </button>
+            
+            <button
+              onClick={handleDelete}
+              disabled={deleteEntry.isPending}
+              className='btn btn-error'
+            >
+              {deleteEntry.isPending ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

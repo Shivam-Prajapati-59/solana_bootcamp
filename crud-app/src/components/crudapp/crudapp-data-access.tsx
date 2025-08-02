@@ -1,17 +1,15 @@
 import {
   CrudappAccount,
-  getCloseInstruction,
   getCrudappProgramAccounts,
   getCrudappProgramId,
-  getDecrementInstruction,
-  getIncrementInstruction,
-  getInitializeInstruction,
-  getSetInstruction,
+  getCreateJournalEntryInstructionAsync,
+  getUpdateJournalEntryInstructionAsync,
+  getDeleteJournalEntryInstructionAsync,
 } from '@project/anchor'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { toast } from 'sonner'
-import { generateKeyPairSigner, signature } from 'gill'
+import { Address } from 'gill'
 import { useWalletUi } from '@wallet-ui/react'
 import { useWalletTransactionSignAndSend } from '../solana/use-wallet-transaction-sign-and-send'
 import { useClusterVersion } from '@/components/cluster/use-cluster-version'
@@ -21,12 +19,6 @@ import { install as installEd25519 } from '@solana/webcrypto-ed25519-polyfill'
 
 // polyfill ed25519 for browsers (to allow `generateKeyPairSigner` to work)
 installEd25519()
-
-interface CreateEntryArgs {
-  title: string
-  content: string
-  owner: string
-} 
 
 export function useCrudappProgramId() {
   const { cluster } = useWalletUi()
@@ -45,59 +37,98 @@ export function useCrudappProgram() {
   })
 }
 
-export function useCrudappInitializeMutation() {
-  const { cluster } = useWalletUi()
-  const queryClient = useQueryClient()
-  const signer = useWalletUiSigner()
-  const signAndSend = useWalletTransactionSignAndSend()
-
-  return useMutation({
-    mutationFn: async () => {
-      const crudapp = await generateKeyPairSigner()
-      return await signAndSend(getInitializeInstruction({ payer: signer, crudapp }), signer)
-    },
-    onSuccess: async (tx) => {
-      toastTx(tx)
-      await queryClient.invalidateQueries({ queryKey: ['crudapp', 'accounts', { cluster }] })
-    },
-    onError: () => toast.error('Failed to run program'),
-  })
-}
-
-export function useCrudappDecrementMutation({ crudapp }: { crudapp: CrudappAccount }) {
+// CRUD Operations for Journal Entries
+export function useCrudappCreateMutation() {
   const invalidateAccounts = useCrudappAccountsInvalidate()
   const signer = useWalletUiSigner()
   const signAndSend = useWalletTransactionSignAndSend()
 
   return useMutation({
-    mutationFn: async () => await signAndSend(getDecrementInstruction({ crudapp: crudapp.address }), signer),
+    mutationFn: async ({ title, message }: { title: string; message: string }) => {
+      const instruction = await getCreateJournalEntryInstructionAsync({
+        owner: signer,
+        title,
+        message,
+      })
+      
+      return await signAndSend(instruction, signer)
+    },
     onSuccess: async (tx) => {
+      toast.success('Entry created successfully')
       toastTx(tx)
       await invalidateAccounts()
     },
+    onError: (error) => {
+      toast.error(`Failed to create entry: ${error.message}`)
+    }
   })
 }
-export function useCrudappSetMutation({ crudapp }: { crudapp: CrudappAccount }) {
+
+export function useCrudappUpdateMutation() {
   const invalidateAccounts = useCrudappAccountsInvalidate()
-  const signAndSend = useWalletTransactionSignAndSend()
   const signer = useWalletUiSigner()
+  const signAndSend = useWalletTransactionSignAndSend()
 
   return useMutation({
-    mutationFn: async (value: number) =>
-      await signAndSend(
-        getSetInstruction({
-          crudapp: crudapp.address,
-          value,
-        }),
-        signer,
-      ),
+    mutationFn: async ({ title, message }: { title: string; message: string }) => {
+      const instruction = await getUpdateJournalEntryInstructionAsync({
+        owner: signer,
+        title,
+        message,
+      })
+      
+      return await signAndSend(instruction, signer)
+    },
     onSuccess: async (tx) => {
+      toast.success('Entry updated successfully')
       toastTx(tx)
       await invalidateAccounts()
     },
+    onError: (error) => {
+      toast.error(`Failed to update entry: ${error.message}`)
+    }
   })
 }
 
+export function useCrudappDeleteMutation() {
+  const invalidateAccounts = useCrudappAccountsInvalidate()
+  const signer = useWalletUiSigner()
+  const signAndSend = useWalletTransactionSignAndSend()
+
+  return useMutation({
+    mutationFn: async ({ title }: { title: string }) => {
+      const instruction = await getDeleteJournalEntryInstructionAsync({
+        owner: signer,
+        title,
+      })
+      
+      return await signAndSend(instruction, signer)
+    },
+    onSuccess: async (tx) => {
+      toast.success('Entry deleted successfully')
+      toastTx(tx)
+      await invalidateAccounts()
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete entry: ${error.message}`)
+    }
+  })
+}
+
+export function useCrudappAccountQuery({ account }: { account: CrudappAccount }) {
+  const { client, cluster } = useWalletUi()
+
+  return useQuery({
+    queryKey: ['crudapp', 'fetch', { cluster, account: account.address }],
+    queryFn: async () => {
+      const accountInfo = await client.rpc.getAccountInfo(account.address).send()
+      if (!accountInfo.value) {
+        throw new Error('Account not found')
+      }
+      return account.data
+    },
+  })
+}
 
 export function useCrudappAccountsQuery() {
   const { client } = useWalletUi()
@@ -114,68 +145,6 @@ function useCrudappAccountsInvalidate() {
 
   return () => queryClient.invalidateQueries({ queryKey })
 }
-const createEntry = useMutation<string, Error, CreateEntryArgs> ({
-  mutationKey : ['journalEntry', 'create', {cluster}],
-
-  mutationFn: async ({ title, content, owner}) => {
-    return program.methods.createEntry(title, message).rpc();
-  },onSuccess: async (signature) => {
-
-    toast.success('Entry created successfully', {
-      description: `Signature: ${signature}`,
-    })
-    
-  },
-  onError: (error) => {
-    toast.error(`Failed to create entry: ${error.message}`)
-  }
-  return {
-    program,
-    accounts,
-    getCrudappProgramId,
-    createEntry,
-  }
-
-})
-
-const accountQuery = useQuery({
-  queryKey: ['crudapp', 'fetch', { cluster, account }],
-  queryFn: () => program.account.journalEntryState.fetch(account),
-});
-
-const updateentry = useMutation<string, Error, CreateEntryArgs>({
-  mutationKey: ['journalEntry', 'update', { cluster }],
-
-  mutationFn: (signature) => {
-    return program.methods.updateJournalEntry(signature).rpc();
-  },
-
-  onSuccess: (signature) => {
-    toast.success('Entry updated successfully', {
-      description: `Signature: ${signature}`,
-    });
-    accounts.refetch();
-  },
-  onError: (error) => {
-    toast.error(`Failed to update entry: ${error.message}`);
-  }
-}) 
-
-const deleteEntry = useMutation ({
-  mutationKey: ['journalEntry', 'delete', { cluster }],
-  mutationFn: ({ title }) => {
-    return program.methods.journalEntryDelete(title).rpc();
-  },
-  onSuccess: async (signature) => {
-    toast.success('Entry deleted successfully', {
-      description: `Signature: ${signature}`,
-    });
-    accounts.refetch();
-  },
-  onError: (error) => {
-    toast.error(`Failed to delete entry: ${error.message}`);
-  }
-})
 
 function useCrudappAccountsQueryKey() {
   const { cluster } = useWalletUi()
