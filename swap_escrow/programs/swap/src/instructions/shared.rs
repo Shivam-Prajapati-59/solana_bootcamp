@@ -1,8 +1,6 @@
-use anchor_lang::{accounts::signer, prelude::*};
-use anchor_spl::{
-    mint,
-    token::{Mint, TokenAccount, TransferChecked},
-    token_interface::TokenInterface,
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{
+    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
 
 pub fn transfer_tokens<'info>(
@@ -20,5 +18,7 @@ pub fn transfer_tokens<'info>(
         authority: authority.to_account_info(),
     };
 
-    let cp
+    let cpi_context = CpiContext::new(token_program.to_account_info(), transfer_accounts_options);
+
+    transfer_checked(cpi_context, *amount, mint.decimals)
 }
