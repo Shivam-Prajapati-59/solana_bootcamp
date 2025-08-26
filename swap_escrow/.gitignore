@@ -1,7 +1,22 @@
+# Anchor build artifacts
 .anchor
-.DS_Store
 target
-**/*.rs.bk
-node_modules
 test-ledger
-.yarn
+
+# Rust backup files
+**/*.rs.bk
+
+# Node/Yarn deps
+node_modules
+yarn-error.log
+
+# Logs
+*.log
+
+# MacOS
+.DS_Store
+
+# Optional (ignore if you don't use, commit if you do)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
