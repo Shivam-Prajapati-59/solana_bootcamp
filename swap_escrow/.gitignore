@@ -2,6 +2,7 @@
 .anchor
 target
 test-ledger
+<<<<<<< HEAD
 
 # Rust backup files
 **/*.rs.bk
@@ -20,3 +21,9 @@ yarn-error.log
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+=======
+.yarn
+.pnpm-debug.log
+package-lock.json
+package.json
+>>>>>>> e0bd36163ddc7200409e59f5b6856ceec9673c39
