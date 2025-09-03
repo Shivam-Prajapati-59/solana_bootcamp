@@ -1,0 +1,10 @@
+/home/bittubadmos/Documents/Rust Projects/solana_boot_camp_prac/token-vesting/anchor/target/sbpf-solana-solana/release/deps/liblog-d5266c45ac0e603d.rmeta: /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/lib.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/macros.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/serde.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/__private_api.rs
+
+/home/bittubadmos/Documents/Rust Projects/solana_boot_camp_prac/token-vesting/anchor/target/sbpf-solana-solana/release/deps/liblog-d5266c45ac0e603d.rlib: /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/lib.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/macros.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/serde.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/__private_api.rs
+
+/home/bittubadmos/Documents/Rust Projects/solana_boot_camp_prac/token-vesting/anchor/target/sbpf-solana-solana/release/deps/log-d5266c45ac0e603d.d: /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/lib.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/macros.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/serde.rs /home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/__private_api.rs
+
+/home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/lib.rs:
+/home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/macros.rs:
+/home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/serde.rs:
+/home/bittubadmos/.cargo/registry/src/index.crates.io-6f17d22bba15001f/log-0.4.27/src/__private_api.rs:
