@@ -1,38 +1,38 @@
-'use client'
+"use client";
 
-import { Keypair, PublicKey } from '@solana/web3.js'
-import { useMemo } from 'react'
-import { ExplorerLink } from '../cluster/cluster-ui'
-import { useCounterProgram, useCounterProgramAccount } from './counter-data-access'
-import { ellipsify } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { useMemo } from "react";
+import { ExplorerLink } from "../cluster/cluster-ui";
+import { useCounterProgram, useCounterProgramAccount } from "./vesting-data-access";
+import { ellipsify } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 
 export function CounterCreate() {
-  const { initialize } = useCounterProgram()
+  const { initialize } = useCounterProgram();
 
   return (
     <Button onClick={() => initialize.mutateAsync(Keypair.generate())} disabled={initialize.isPending}>
-      Create {initialize.isPending && '...'}
+      Create {initialize.isPending && "..."}
     </Button>
-  )
+  );
 }
 
 export function CounterList() {
-  const { accounts, getProgramAccount } = useCounterProgram()
+  const { accounts, getProgramAccount } = useCounterProgram();
 
   if (getProgramAccount.isLoading) {
-    return <span className="loading loading-spinner loading-lg"></span>
+    return <span className="loading loading-spinner loading-lg"></span>;
   }
   if (!getProgramAccount.data?.value) {
     return (
       <div className="alert alert-info flex justify-center">
         <span>Program account not found. Make sure you have deployed the program and are on the correct cluster.</span>
       </div>
-    )
+    );
   }
   return (
-    <div className={'space-y-6'}>
+    <div className={"space-y-6"}>
       {accounts.isLoading ? (
         <span className="loading loading-spinner loading-lg"></span>
       ) : accounts.data?.length ? (
@@ -43,20 +43,20 @@ export function CounterList() {
         </div>
       ) : (
         <div className="text-center">
-          <h2 className={'text-2xl'}>No accounts</h2>
+          <h2 className={"text-2xl"}>No accounts</h2>
           No accounts found. Create one above to get started.
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function CounterCard({ account }: { account: PublicKey }) {
   const { accountQuery, incrementMutation, setMutation, decrementMutation, closeMutation } = useCounterProgramAccount({
     account,
-  })
+  });
 
-  const count = useMemo(() => accountQuery.data?.count ?? 0, [accountQuery.data?.count])
+  const count = useMemo(() => accountQuery.data?.count ?? 0, [accountQuery.data?.count]);
 
   return accountQuery.isLoading ? (
     <span className="loading loading-spinner loading-lg"></span>
@@ -80,11 +80,11 @@ function CounterCard({ account }: { account: PublicKey }) {
           <Button
             variant="outline"
             onClick={() => {
-              const value = window.prompt('Set value to:', count.toString() ?? '0')
+              const value = window.prompt("Set value to:", count.toString() ?? "0");
               if (!value || parseInt(value) === count || isNaN(parseInt(value))) {
-                return
+                return;
               }
-              return setMutation.mutateAsync(parseInt(value))
+              return setMutation.mutateAsync(parseInt(value));
             }}
             disabled={setMutation.isPending}
           >
@@ -100,10 +100,10 @@ function CounterCard({ account }: { account: PublicKey }) {
           <Button
             variant="destructive"
             onClick={() => {
-              if (!window.confirm('Are you sure you want to close this account?')) {
-                return
+              if (!window.confirm("Are you sure you want to close this account?")) {
+                return;
               }
-              return closeMutation.mutateAsync()
+              return closeMutation.mutateAsync();
             }}
             disabled={closeMutation.isPending}
           >
@@ -112,5 +112,5 @@ function CounterCard({ account }: { account: PublicKey }) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
