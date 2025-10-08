@@ -2,7 +2,7 @@
 
 import { getVestingProgram, getVestingProgramId } from "@project/anchor";
 import { useConnection } from "@solana/wallet-adapter-react";
-import { Cluster, Keypair, PublicKey } from "@solana/web3.js";
+import { Cluster, PublicKey } from "@solana/web3.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useCluster } from "../cluster/cluster-data-access";
@@ -20,9 +20,9 @@ interface CreateVestingArgs {
 interface CreateEmployeeArgs {
   startTime: number;
   endTime: number;
-  cliffTime: number;
   totalAmount: number;
-  beneficiary: string;
+  cliffTime: number;
+  beneficiary?: string;
 }
 
 export function useVestingProgram() {
@@ -34,7 +34,7 @@ export function useVestingProgram() {
   const program = getVestingProgram(provider);
 
   const accounts = useQuery({
-    queryKey: ["vesting", "all", { cluster }],
+    queryKey: ["vesting", "fetch", { cluster }],
     queryFn: () => program.account.vestingAccount.all(),
   });
 
@@ -78,8 +78,10 @@ export function useVestingProgramAccount({ account }: { account: PublicKey }) {
 
   const createEmployeeVesting = useMutation<string, Error, CreateEmployeeArgs>({
     mutationKey: ["vesting", "close", { cluster, account }],
-    mutationFn: ({ startTime, endTime, totalAmount, cliffTime, beneficiary }) =>
-      program.methods.createEmployeeVesting(startTime, endTime, totalAmount, cliffTime).rpc(),
+    mutationFn: ({ startTime, endTime, totalAmount, cliffTime }) =>
+      program.methods
+        .createEmployeeVesting(new BN(startTime), new BN(endTime), new BN(totalAmount), new BN(cliffTime))
+        .rpc(),
     onSuccess: (tx) => {
       transactionToast(tx);
       return accounts.refetch();

@@ -60,7 +60,6 @@ describe("Vesting Smart Contract Tests", () => {
     employer = provider.wallet.payer;
 
     // Create a new mint
-    // @ts-ignore
     mint = await createMint(banksClient, employer, employer.publicKey, null, 2);
 
     // Generate a new keypair for the beneficiary
@@ -101,15 +100,7 @@ describe("Vesting Smart Contract Tests", () => {
 
   it("should fund the treasury token account", async () => {
     const amount = 10_000 * 10 ** 9;
-    const mintTx = await mintTo(
-      // @ts-ignores
-      banksClient,
-      employer,
-      mint,
-      treasuryTokenAccount,
-      employer,
-      amount,
-    );
+    const mintTx = await mintTo(banksClient, employer, mint, treasuryTokenAccount, employer, amount);
 
     console.log("Mint to Treasury Transaction Signature:", mintTx);
   });
