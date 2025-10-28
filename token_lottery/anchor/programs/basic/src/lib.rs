@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
+use anchor_spl::{
+    associated_token::AssociatedToken, metadata::Metadata, token_interface::TokenInterface,
+};
 
-declare_id!("JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H");
+declare_id!("BHhz24Wf9aw2tdvNYKXPUVhgCCgHHLZWHJ1BWHHtUc9Y");
 #[program]
 pub mod token_lottery {
     use super::*;
@@ -21,6 +24,14 @@ pub mod token_lottery {
 
         ctx.accounts.token_lottery.winner_choosen = false;
 
+        Ok(());
+
+        pub fn initialize_lottery(_ctx: Context<InitializeLottery>) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    pub fn initialize_lottery(_ctx: Context<InitializeLottery>) -> Result<()> {
         Ok(())
     }
 }
@@ -37,6 +48,30 @@ pub struct Initialize<'info> {
     pub token_lottery: Account<'info, TokenLottery>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+
+pub struct InitializeLottery<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        mint::decimals = 0,
+        mint::authority = payer,
+        mint::freeze_auhtority = payer,
+
+        seeds = [b"collection_mint".as_ref()],
+        bump
+
+    )]
+    pub collection_mint: InterfaceAccount<'info, Mint>,
+    pub token_metadata_program: Program<'info, Metadata>,
+    pub associate_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
