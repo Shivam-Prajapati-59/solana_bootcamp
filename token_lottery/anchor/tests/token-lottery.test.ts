@@ -1,6 +1,7 @@
 import * as anchor from '@coral-xyz/anchor'
 import { Program } from '@coral-xyz/anchor'
 import { TokenLottery } from '../target/types/token_lottery'
+import { TOKEN_PROGRAM_ID } from '@coral-xyz/anchor/dist/cjs/utils/token'
 
 describe('tokenLottery', () => {
   const provider = anchor.AnchorProvider.env()
@@ -48,6 +49,27 @@ describe('tokenLottery', () => {
         skipPreflight: false, // Changed to false to see errors
       })
       console.log('Your Transaction Signature', Signature)
+
+      const initLottery = await program.methods
+        .initializeLottery()
+        .accounts({
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .instruction()
+
+      const initLotteryTx = new anchor.web3.Transaction({
+        feePayer: wallet.publicKey,
+        blockhash: BlockhashwithContext.blockhash,
+        lastValidBlockHeight: BlockhashwithContext.lastValidBlockHeight,
+      })
+      const initLotterySignature = await anchor.web3.sendAndConfirmTransaction(
+        provider.connection,
+        initLotteryTx,
+        [wallet.payer],
+        { skipPreflight: true },
+      )
+
+      console.log('Your Init Lottery signature:', initLotterySignature)
     } catch (error: any) {
       console.error('Transaction failed!')
       if (error.logs) {
