@@ -10,7 +10,7 @@ describe('tokenLottery', () => {
 
   const program = anchor.workspace.TokenLottery as Program<TokenLottery>
 
-  it('should init config', async () => {
+  it('should test token Lottery', async () => {
     // Derive the PDA to check if it exists
     const [tokenLotteryPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from('token_lottery')],
@@ -42,14 +42,14 @@ describe('tokenLottery', () => {
       lastValidBlockHeight: BlockhashwithContext.lastValidBlockHeight,
     }).add(initConfigTx)
 
-    console.log('Your Transaction Signature', tx)
-
     try {
-      const Signature = await anchor.web3.sendAndConfirmTransaction(provider.connection, tx, [wallet.payer], {
-        skipPreflight: false, // Changed to false to see errors
+      // Send initialize config transaction
+      const configSignature = await anchor.web3.sendAndConfirmTransaction(provider.connection, tx, [wallet.payer], {
+        skipPreflight: false,
       })
-      console.log('Your Transaction Signature', Signature)
+      console.log('Initialize Config Transaction Signature:', configSignature)
 
+      // Build initialize lottery instruction
       const initLottery = await program.methods
         .initializeLottery()
         .accounts({
@@ -57,19 +57,25 @@ describe('tokenLottery', () => {
         })
         .instruction()
 
+      // Get fresh blockhash for second transaction
+      const latestBlockhash = await provider.connection.getLatestBlockhash()
+
+      // Create transaction and ADD the instruction
       const initLotteryTx = new anchor.web3.Transaction({
         feePayer: wallet.publicKey,
-        blockhash: BlockhashwithContext.blockhash,
-        lastValidBlockHeight: BlockhashwithContext.lastValidBlockHeight,
-      })
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      }).add(initLottery) // THIS WAS MISSING!
+
+      // Send initialize lottery transaction
       const initLotterySignature = await anchor.web3.sendAndConfirmTransaction(
         provider.connection,
         initLotteryTx,
         [wallet.payer],
-        { skipPreflight: true },
+        { skipPreflight: false },
       )
 
-      console.log('Your Init Lottery signature:', initLotterySignature)
+      console.log('Initialize Lottery Transaction Signature:', initLotterySignature)
     } catch (error: any) {
       console.error('Transaction failed!')
       if (error.logs) {
