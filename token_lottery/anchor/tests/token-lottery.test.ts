@@ -10,12 +10,42 @@ describe('tokenLottery', () => {
 
   const program = anchor.workspace.TokenLottery as Program<TokenLottery>
 
+  async function buyticket() {
+    const buyticketsTx = await program.methods
+      .buyTicket() // Fix: Changed from .buyticket() to .buyTicket() (camelCase)
+      .accounts({
+        tokenProgram: TOKEN_PROGRAM_ID, // Fix: Changed from token_programa to tokenProgram
+      })
+      .instruction()
+
+    const computeTx = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+      units: 300000,
+    })
+
+    const priorityTx = anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({
+      microLamports: 1,
+    })
+
+    const blockhashwithContext = await provider.connection.getLatestBlockhash()
+
+    const tx = new anchor.web3.Transaction({
+      feePayer: provider.wallet.publicKey,
+      blockhash: blockhashwithContext.blockhash,
+      lastValidBlockHeight: blockhashwithContext.lastValidBlockHeight,
+    })
+      .add(computeTx)
+      .add(priorityTx)
+      .add(buyticketsTx)
+
+    const signature = await anchor.web3.sendAndConfirmTransaction(provider.connection, tx, [wallet.payer], {
+      skipPreflight: false,
+    })
+    console.log('Buy Ticket Transaction Signature:', signature)
+  }
+
   it('should test token Lottery', async () => {
     // Derive the PDA to check if it exists
-    const [tokenLotteryPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('token_lottery')],
-      program.programId,
-    )
+    const [tokenLotteryPda] = anchor.web3.PublicKey.findProgramAddressSync([Buffer.from('lottery')], program.programId)
 
     // Check if the account already exists
     const accountInfo = await provider.connection.getAccountInfo(tokenLotteryPda)
@@ -27,12 +57,11 @@ describe('tokenLottery', () => {
     }
 
     // Build the instruction - Anchor will auto-resolve the PDA accounts
-    const initConfigTx = await program.methods
-      .initializeConfig(
-        new anchor.BN(0), // start time
-        new anchor.BN(1861206985), // end time
-        new anchor.BN(10000), // ticket price
-      )
+    const initLotteryTx = await program.methods
+      .initLottery(new anchor.BN(10000)) // Fix: Changed from initializeConfig to initLottery with ticket_price parameter
+      .accounts({
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
       .instruction()
 
     const BlockhashwithContext = await provider.connection.getLatestBlockhash()
@@ -40,42 +69,17 @@ describe('tokenLottery', () => {
       feePayer: wallet.publicKey,
       blockhash: BlockhashwithContext.blockhash,
       lastValidBlockHeight: BlockhashwithContext.lastValidBlockHeight,
-    }).add(initConfigTx)
+    }).add(initLotteryTx)
 
     try {
-      // Send initialize config transaction
-      const configSignature = await anchor.web3.sendAndConfirmTransaction(provider.connection, tx, [wallet.payer], {
+      // Send initialize lottery transaction
+      const lotterySignature = await anchor.web3.sendAndConfirmTransaction(provider.connection, tx, [wallet.payer], {
         skipPreflight: false,
       })
-      console.log('Initialize Config Transaction Signature:', configSignature)
+      console.log('Initialize Lottery Transaction Signature:', lotterySignature)
 
-      // Build initialize lottery instruction
-      const initLottery = await program.methods
-        .initializeLottery()
-        .accounts({
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .instruction()
-
-      // Get fresh blockhash for second transaction
-      const latestBlockhash = await provider.connection.getLatestBlockhash()
-
-      // Create transaction and ADD the instruction
-      const initLotteryTx = new anchor.web3.Transaction({
-        feePayer: wallet.publicKey,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }).add(initLottery) // THIS WAS MISSING!
-
-      // Send initialize lottery transaction
-      const initLotterySignature = await anchor.web3.sendAndConfirmTransaction(
-        provider.connection,
-        initLotteryTx,
-        [wallet.payer],
-        { skipPreflight: false },
-      )
-
-      console.log('Initialize Lottery Transaction Signature:', initLotterySignature)
+      // Buy a ticket after initialization
+      await buyticket()
     } catch (error: any) {
       console.error('Transaction failed!')
       if (error.logs) {

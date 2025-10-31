@@ -4,11 +4,13 @@ use anchor_spl::{
     metadata::{
         create_master_edition_v3, create_metadata_accounts_v3,
         mpl_token_metadata::types::{CollectionDetails, Creator, DataV2},
-        sign_metadata, CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata, SignMetadata,
+        set_and_verify_sized_collection_item, sign_metadata, CreateMasterEditionV3,
+        CreateMetadataAccountsV3, Metadata, SetAndVerifySizedCollectionItem, SignMetadata,
     },
     token_interface::{mint_to, Mint, MintTo, TokenAccount, TokenInterface},
 };
 
+use anchor_lang::system_program::{transfer, Transfer};
 declare_id!("GZmdoHhZXT86WRoBmRupEDEieE8uAFQEonfYS3MQv2h2");
 
 #[constant]
@@ -20,9 +22,6 @@ pub const URI: &str = "https://imgs.search.brave.com/BuXsFKShnOj23jFhrEWsJ-PRrkG
 
 #[program]
 pub mod token_lottery {
-    use anchor_lang::solana_program::{clock, example_mocks::solana_sdk::system_program};
-    use anchor_spl::metadata::set_and_verify_sized_collection_item;
-
     use super::*;
 
     pub fn initialize_config(
@@ -129,49 +128,54 @@ pub mod token_lottery {
     }
 
     pub fn buy_ticket(ctx: Context<BuyTicket>) -> Result<()> {
-
         let clock = Clock::get()?;
-        let ticket_name = NAME.to_owned() + ctx.accounts.token_lottery.total_tickets.to_string().as_str();
+        let ticket_name = NAME.to_owned()
+            + ctx
+                .accounts
+                .token_lottery
+                .total_tickets
+                .to_string()
+                .as_str();
 
-        if clock.slot <  ctx.accounts.token_lottery.start_time || clock.slot > ctx.accounts.token_lottery.end_time{
+        if clock.slot < ctx.accounts.token_lottery.start_time
+            || clock.slot > ctx.accounts.token_lottery.end_time
+        {
             return Err(ErrorCode::LotteryNotOpen.into());
         }
 
-        system_program::transfer(
+        transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
-                system_program::Transfer {
+                Transfer {
                     from: ctx.accounts.payer.to_account_info(),
                     to: ctx.accounts.token_lottery.to_account_info(),
-                }
+                },
             ),
             ctx.accounts.token_lottery.ticket_price,
-     
         )?;
 
-        let signer_seeds: &[&[&[u8]]] = &[&[b"collection_mint".as_ref(), &[ctx.bumps.collection_mint.bump],
-        
-        ]];
+        let signer_seeds: &[&[&[u8]]] =
+            &[&[b"collection_mint".as_ref(), &[ctx.bumps.collection_mint]]];
 
         mint_to(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 MintTo {
-                    mint:ctx.accounts.ticket_mint.to_account_info(),
-                    to:ctx.accounts.destination.to_account_info(),
+                    mint: ctx.accounts.ticket_mint.to_account_info(),
+                    to: ctx.accounts.destination.to_account_info(),
                     authority: ctx.accounts.collection_mint.to_account_info(),
                 },
-                 &signer_seeds
+                &signer_seeds,
             ),
             1,
         )?;
 
-msg!("Creating Metadata account");
+        msg!("Creating Metadata account");
         create_metadata_accounts_v3(
             CpiContext::new_with_signer(
                 ctx.accounts.token_metadata_program.to_account_info(),
                 CreateMetadataAccountsV3 {
-                    metadata: ctx.accounts.ticket_metadata.to_account_info(),
+                    metadata: ctx.accounts.metadata.to_account_info(),
                     mint: ctx.accounts.ticket_mint.to_account_info(),
                     mint_authority: ctx.accounts.collection_mint.to_account_info(),
                     payer: ctx.accounts.payer.to_account_info(),
@@ -182,7 +186,7 @@ msg!("Creating Metadata account");
                 signer_seeds,
             ),
             DataV2 {
-                name: ticket_name
+                name: ticket_name,
                 symbol: SYMBOL.to_string(),
                 uri: URI.to_string(),
                 seller_fee_basis_points: 0,
@@ -202,10 +206,10 @@ msg!("Creating Metadata account");
                 CreateMasterEditionV3 {
                     payer: ctx.accounts.payer.to_account_info(),
                     mint: ctx.accounts.ticket_mint.to_account_info(),
-                    edition: ctx.accounts.ticket_master_edition.to_account_info(),
+                    edition: ctx.accounts.master_edition.to_account_info(),
                     mint_authority: ctx.accounts.collection_mint.to_account_info(),
                     update_authority: ctx.accounts.collection_mint.to_account_info(),
-                    metadata: ctx.accounts.ticket_metadata.to_account_info(),
+                    metadata: ctx.accounts.metadata.to_account_info(),
                     token_program: ctx.accounts.token_program.to_account_info(),
                     system_program: ctx.accounts.system_program.to_account_info(),
                     rent: ctx.accounts.rent.to_account_info(),
@@ -215,19 +219,27 @@ msg!("Creating Metadata account");
             Some(0),
         )?;
 
-        set_and_verify_sized_collection_item(CpiContext::new_with_signer(
-            ctx.accounts.token_metadata_program.to_account_info(),
+        set_and_verify_sized_collection_item(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_metadata_program.to_account_info(),
+                SetAndVerifySizedCollectionItem {
+                    metadata: ctx.accounts.metadata.to_account_info(),
+                    collection_authority: ctx.accounts.collection_mint.to_account_info(),
+                    payer: ctx.accounts.payer.to_account_info(),
+                    update_authority: ctx.accounts.collection_mint.to_account_info(),
+                    collection_mint: ctx.accounts.collection_mint.to_account_info(),
+                    collection_metadata: ctx.accounts.collection_metadata.to_account_info(),
+                    collection_master_edition: ctx
+                        .accounts
+                        .collection_master_edition
+                        .to_account_info(),
+                },
+                &signer_seeds,
+            ),
+            None,
+        )?;
 
-            SetandVerifySizedCollectionItem{
-           metadata: ctx.accounts.ticket_metadata.to_account_info(),
-            collection_authority:ctx.accounts.collection_mint.to_account_info(),
-            payer: ctx.accounts.payer.to_account_info(),
-            update_authority: ctx.accounts.collection_mint.to_account_info(),
-            collection_metadata: ctx.accounts.collection_metadata.to_account_info(),
-        },
-        &signer_seeds
-    ), 
-    None)?;
+        ctx.accounts.token_lottery.total_tickets += 1;
 
         Ok(())
     }
@@ -337,11 +349,8 @@ pub struct BuyTicket<'info> {
 
     #[account(
         mut,
-        seeds = [
-            b"metadata", 
-            token_metadata_program.key().as_ref(), 
-            ticket_mint.key().as_ref()
-        ],
+        seeds = [b"metadata", token_metadata_program.key().as_ref(), 
+        ticket_mint.key().as_ref()],
         bump,
         seeds::program = token_metadata_program.key(),
     )]
@@ -350,12 +359,8 @@ pub struct BuyTicket<'info> {
 
     #[account(
         mut,
-        seeds = [
-            b"metadata", 
-            token_metadata_program.key().as_ref(), 
-            ticket_mint.key().as_ref(), 
-            b"edition"
-        ],
+        seeds = [b"metadata", token_metadata_program.key().as_ref(), 
+            ticket_mint.key().as_ref(), b"edition"],
         bump,
         seeds::program = token_metadata_program.key(),
     )]
@@ -364,11 +369,7 @@ pub struct BuyTicket<'info> {
 
     #[account(
         mut,
-        seeds = [
-            b"metadata", 
-            token_metadata_program.key().as_ref(), 
-            collection_mint.key().as_ref()
-        ],
+        seeds = [b"metadata", token_metadata_program.key().as_ref(), collection_mint.key().as_ref()],
         bump,
         seeds::program = token_metadata_program.key(),
     )]
@@ -377,12 +378,8 @@ pub struct BuyTicket<'info> {
 
     #[account(
         mut,
-        seeds = [
-            b"metadata", 
-            token_metadata_program.key().as_ref(), 
-            collection_mint.key().as_ref(), 
-            b"edition"
-        ],
+        seeds = [b"metadata", token_metadata_program.key().as_ref(), 
+            collection_mint.key().as_ref(), b"edition"],
         bump,
         seeds::program = token_metadata_program.key(),
     )]

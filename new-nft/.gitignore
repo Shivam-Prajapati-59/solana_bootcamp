@@ -1,0 +1,15 @@
+/target/
+/dist/
+/build/
+/coverage/
+.DS_Store
+
+node_modules/
+/package-lock.json
+/yarn.lock
+
+.env
+*.log
+
+.vscode/
+.idea/
